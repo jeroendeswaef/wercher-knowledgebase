@@ -6,14 +6,19 @@ import org.springframework.batch.item.ParseException;
 import org.springframework.batch.item.UnexpectedInputException;
 import org.springframework.batch.item.support.ListItemReader;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class FilesystemImageItemReader implements ItemReader<Item> {
 
     private ListItemReader<Item> fileListReader;
-    public FilesystemImageItemReader(String basePath) {
-        // TODO walk fs, convert to list & provide to the ListItemReader
-        fileListReader = new ListItemReader<>(List.of(new Item("a"), new Item("b"), new Item("c")));
+    public FilesystemImageItemReader(String basePath) throws IOException {
+        List lst = Files.find(Paths.get(basePath), 999, (p, bfa) -> bfa.isRegularFile()
+                && p.getFileName().toString().matches(".*\\.jpeg")).map(fileName -> new Item(fileName.toString())).collect(Collectors.toList());
+        fileListReader = new ListItemReader<>(lst);
     }
 
     @Override

@@ -9,15 +9,19 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
+import java.io.IOException;
 
 @Configuration
 public class BatchConfiguration {
+
+    @Value("#{environment.BASE_PATH}")
+    private String knowledgeBaseFilePath;
 
     @Bean
     public JdbcBatchItemWriter<Item> writer(DataSource dataSource) {
@@ -38,22 +42,14 @@ public class BatchConfiguration {
 
     @Bean
     public Step step1(JobRepository jobRepository, PlatformTransactionManager transactionManager, JdbcBatchItemWriter<Item> writer) {
-        return new StepBuilder("step1", jobRepository)
-                .<Item, Item> chunk(10, transactionManager)
-               // .chunk(10, transactionManager)
-                .reader(new FilesystemImageItemReader("bp"))
-                .writer(writer)
-//                .tasklet((contribution, chunkContext) -> {
-//                    System.out.println("><> Inside tasklet!");
-//                    return RepeatStatus.FINISHED;
-//                })
-                .build();
+        try {
+            return new StepBuilder("step1", jobRepository)
+                    .<Item, Item> chunk(10, transactionManager)
+                    .reader(new FilesystemImageItemReader(this.knowledgeBaseFilePath))
+                    .writer(writer)
+                    .build();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
-
-   /* @Bean
-    public BatchConfigurer batchConfigurer(DataSource dataSource) {
-        return new DefaultBatchConfigurer(dataSource) {
-
-        };
-    }*/
 }
